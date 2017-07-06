@@ -1,0 +1,53 @@
+plugins {
+    id 'groovy'
+}
+
+apply plugin: 'marytts-kaldi-mfa'
+
+
+plugins {
+    id "de.undercouch.download" version "3.2.0"
+}
+
+import de.undercouch.gradle.tasks.download.Download
+
+
+task downloadData(type: Download) {
+    src 'https://github.com/insa-k/marytts-voicebuilding-hvoice-data/releases/download/data/data.zip'
+    dest "$buildDir/data.zip"
+    overwrite false
+    onlyIfNewer true
+}
+
+task unpackWav(type: Copy) {
+    from zipTree("$buildDir/data.zip"), {
+        include '**/wav/*.wav'
+        eachFile {
+            it.path = it.name
+        }
+    }
+    into "$buildDir/wav"
+    includeEmptyDirs = false
+    dependsOn downloadData
+}
+
+task unpackText(type: Copy) {
+    from zipTree("$buildDir/data.zip"), {
+        include '**/text/*.txt'
+        eachFile {
+            it.path = it.name
+        }
+    }
+    into "$buildDir/text"
+    includeEmptyDirs = false
+    dependsOn downloadData
+}
+
+convertTextToMaryXml {
+    dependsOn unpackText, unpackWav
+    srcDir = file("$buildDir/text")
+}
+
+runForcedAlignment {
+    dependsOn convertTextToMaryXml, prepareForcedAlignment
+}
